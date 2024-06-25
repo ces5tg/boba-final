@@ -27,7 +27,7 @@ FROM base AS final
 COPY . .
 
 # Make port 80 available for links and/or publish
-EXPOSE 5050
+EXPOSE 3400
 
 # Define our command to be run when launching the container
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5050", "--log-file", "-", "--access-logfile", "-", "--workers", "4", "--keep-alive", "0"]
+CMD ["gunicorn", "app:app", "-b", "0.0.0.0:3400", "--log-file", "-", "--access-logfile", "-", "--workers", "4", "--keep-alive", "0"]

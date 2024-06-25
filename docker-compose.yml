@@ -1,5 +1,25 @@
 
 services:
+  recoleccion:
+    build: 
+      context: ./recoleccion
+      target: dev
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+     - ./recoleccion:/usr/local/app
+    ports:
+      - "3400:3400"
+    networks:
+      - miRed
+      
   procesamiento:
     build: 
       context: ./procesamiento
@@ -13,7 +33,7 @@ services:
         condition: service_healthy
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 15s
+      interval: 5s
       timeout: 5s
       retries: 3
       start_period: 10s
