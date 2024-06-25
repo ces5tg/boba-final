@@ -8,7 +8,7 @@ services:
       redis:
         condition: service_healthy
       worker:
-        condition: service_healthy
+        condition: service_started
       kafka-broker-1:
         condition: service_healthy
     healthcheck: 
@@ -43,8 +43,15 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
-    networks:
+    networks: 
       - miRed
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check-worker.sh"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./health-check-worker.sh:/usr/local/bin/health-check-worker.sh
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper

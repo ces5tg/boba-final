@@ -157,7 +157,7 @@ def recomendar(user_id, cercanos, movies_filtro):
 
     return resultados
 
-def coseno_categorias(user_id):
+def coseno_categorias(user_id): #comparacion entre vectores de peliculas segun sus categorias
     movies = obtener_movies_de_redis().to_dict(orient='records')
     genres_set = set(genre for movie in movies for genre in movie['generos'] if genre)
     for movie in movies:
@@ -224,7 +224,7 @@ def knn_usuarios(user_id, visualizaciones):
     print(recomendaciones_final)
     print("++++++++++++++++++++++++++++")
     print(df_movies_filtro)
-
+    #(1 , 0.67) , (45,0,97)
     # Llamar a la función recomendar para obtener las recomendaciones finales
     final_recommendations = recomendar(user_id, recomendaciones_final, df_movies_filtro.to_dict(orient='records'))
 
