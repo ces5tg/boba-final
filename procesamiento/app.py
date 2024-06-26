@@ -16,9 +16,10 @@ VISUALIZACIONES_API = 'http://worker:8080/api/visualizacion'
 MOVIES_API = 'http://worker:8080/api/movies'
 USUARIOS_API = 'http://worker:8080/api/usuarios'
 
-# Conectar a Redis
-redis_client = redis.Redis(host='redis', port=6379, db=0)
-
+# Conectar a Redis 
+redis_client = redis.Redis(host='redis', port=6379, db=0) #redis -> escritura
+redis_client_read = redis.Redis(host='redis-slave1', port=7001, db=0) # redis-slave1 -> lectura
+redis_client_resultados = redis.Redis(host='redis', port=6379, db=1)
 # Inicializar un DataFrame vacío
 df_visualizaciones = pd.DataFrame()
 df_movies = pd.DataFrame()  # Nuevo DataFrame para almacenar las películas
@@ -87,7 +88,8 @@ thread = Thread(target=consumidor_kafka)
 thread.start()
 
 def obtener_visualizaciones_de_redis():
-    data = redis_client.get('df_visualizaciones')
+    data = redis_client_read.get('df_visualizaciones')
+    print(data)
     if data:
         json_data = json.loads(data)
         df = pd.DataFrame(json_data)
@@ -95,7 +97,7 @@ def obtener_visualizaciones_de_redis():
     return pd.DataFrame()
 
 def obtener_movies_de_redis():
-    data = redis_client.get('df_movies')
+    data = redis_client_read.get('df_movies')
     if data:
         json_data = json.loads(data)
         df = pd.DataFrame(json_data)
@@ -160,6 +162,8 @@ def recomendar(user_id, cercanos, movies_filtro):
 def coseno_categorias(user_id): #comparacion entre vectores de peliculas segun sus categorias
     movies = obtener_movies_de_redis().to_dict(orient='records')
     genres_set = set(genre for movie in movies for genre in movie['generos'] if genre)
+    print(genres_set)
+    print("+++++++++++++++++++++++")
     for movie in movies:
         movie['genre_vector'] = [1 if genre in movie['generos'] else 0 for genre in genres_set]
 
@@ -188,7 +192,7 @@ def coseno_categorias(user_id): #comparacion entre vectores de peliculas segun s
     resultados = []
     for pelicula in filtered_movies[:10]:
         elemento = {
-            'id': pelicula['id_x'],
+            'id': pelicula['id'],
             'datos': {
                 'movieId': pelicula['movieId'],
                 'url': pelicula['url']
@@ -258,12 +262,16 @@ def recomendar_para_usuario(user_id):
     if len(visualizaciones_usuario) <= 3:
         print("AQUI SE PROBARA LA SIMILTIDUD DEL COSENOcon ENFOCADA A LOS USUARIOS")
         resultados = coseno_categorias(user_id)
+        for pelicula in resultados:
+            redis_client_resultados.rpush(f"recomendaciones:{user_id}", json.dumps(pelicula))
         return jsonify(resultados), 200
     else:
         start_time = time.time()
         resultados = knn_usuarios(user_id, df_visualizaciones)
         tiempo_ejecucion = time.time() - start_time
         print("el tiempo de ejecucion de KNN-USUARIO ES " , tiempo_ejecucion)
+        for pelicula in resultados:
+            redis_client_resultados.rpush(f"recomendaciones:{user_id}", json.dumps(pelicula))
         return jsonify(resultados=resultados, tiempo_ejecucion=tiempo_ejecucion), 200
 
 if __name__ == '__main__':

@@ -1,2 +1,5 @@
 confluent_kafka
 Flask
+requests
+redis
+

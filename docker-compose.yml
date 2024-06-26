@@ -5,8 +5,12 @@ services:
       context: ./recoleccion
       target: dev
     depends_on:
+      redis-slave1:
+        condition: service_started
       kafka-broker-1:
         condition: service_healthy
+      worker:
+        condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
@@ -31,6 +35,8 @@ services:
         condition: service_started
       kafka-broker-1:
         condition: service_healthy
+      redis-slave1:
+        condition: service_started
     healthcheck: 
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 5s
@@ -43,18 +49,46 @@ services:
       - "5050:5050"
     networks:
       - miRed
-      
+      #++++++++++++++++++++++++++++++++++++++++++++++++++++
   redis:
-    image: redis:latest
+    image: redis:6
+    command: ["redis-server", "--port", "6379", "--maxmemory", "1GB", "--maxmemory-policy", "allkeys-lru"]
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 3
     networks:
       - miRed
+
+  redis-slave1:
+    image: redis:6
+    command: ["redis-server", "--port", "7001", "--slaveof", "redis", "6379"]
+    ports:
+      - "7001:7001"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - miRed
+
+  redis-slave2:
+    image: redis:6
+    command: ["redis-server", "--port", "7002", "--slaveof", "redis", "6379"]
+    ports:
+      - "7002:7002"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - miRed
+
   worker:
     build:
       context: ./worker

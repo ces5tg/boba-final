@@ -73,7 +73,10 @@ namespace TodoApi.Controllers
 
             return NoContent();
         }
-
+       /* {
+  "Gmail": "cesar@example.com",
+  "Password": "123"
+} */
         [HttpPost("login")]
         public async Task<ActionResult<Usuario>> Login([FromBody] LoginRequest request)
         {
@@ -89,5 +92,51 @@ namespace TodoApi.Controllers
 
             return Ok(usuario);
         }
+         // POST: api/Usuarios/register
+  
+        [HttpPost("register")]
+        public async Task<ActionResult<Usuario>> Register([FromBody] Usuario usuario)
+        {
+            // Verificar si ya existe un usuario con el mismo Gmail
+            var existingUser = await _usuarioService.GetAsyncByGmail(usuario.Gmail);
+
+            if (existingUser != null)
+            {
+                return Conflict(new { message = "Ya existe un usuario registrado con este Gmail" });
+            }
+
+            await _usuarioService.CreateAsync(usuario);
+
+            // Retornar el usuario recién creado
+            return CreatedAtRoute("GetUsuario", new { id = usuario.Id }, usuario);
+        }
+
+
+        /* 
+        {
+  "Id": "667b196e596dc555f334586a",
+  "CategoriasPreferidas": [
+    "Comedia",
+    "Familia"
+  ]
+} */
+[HttpPost("sendCategorias")]
+public async Task<IActionResult> SendCategorias([FromBody] CategoriaRequest request)
+{
+    Console.WriteLine($"Request recibido: Id={request.Id}, CategoriasPreferidas=[{string.Join(", ", request.CategoriasPreferidas)}]");
+    
+    var usuario = await _usuarioService.GetAsync(request.Id);
+
+    if (usuario == null)
+    {
+        return NotFound($"Usuario con Id {request.Id} no encontrado");
+    }
+
+    usuario.CategoriasPreferidas = request.CategoriasPreferidas;
+
+    await _usuarioService.UpdateAsync(request.Id, usuario);
+
+    return Ok(usuario);
+}
     }
 }

@@ -30,21 +30,25 @@ namespace TodoApi.Models
         public async Task RemoveAsync(string id) =>
             await _usuarios.DeleteOneAsync(usuario => usuario.Id == id);
 
-        public async Task<Usuario?> AuthenticateAsync(string gmail, string password)
-        {
-            var usuario = await _usuarios.Find(u => u.Gmail == gmail).FirstOrDefaultAsync();
+public async Task<Usuario> AuthenticateAsync(string gmail, string password)
+{
+    var usuario = await _usuarios.Find(u => u.Gmail == gmail).FirstOrDefaultAsync();
 
-            // Si no se encontró el usuario con el correo electrónico dado, retornar null
-            if (usuario == null)
-                return null;
+    // Si no se encontró el usuario con el correo electrónico dado, retornar null
+    if (usuario == null)
+        return null;
 
-            // Aquí deberías comparar la contraseña ingresada con la almacenada de forma segura
-            // En este ejemplo, se compara como texto plano (lo cual no es seguro)
-            if (usuario.Password == password)
-                return usuario;
-            else
-                return null;
-        }
+    // Aquí deberías comparar la contraseña ingresada con la almacenada de forma segura
+    // En este ejemplo, se compara como texto plano (lo cual no es seguro)
+    if (usuario.Password == password)
+        return usuario;
+    else
+        return null;
+}
+    public async Task<Usuario> GetAsyncByGmail(string gmail)
+            {
+                return await _usuarios.Find(u => u.Gmail == gmail).FirstOrDefaultAsync();
+            }
     }
 
      
@@ -57,5 +61,6 @@ namespace TodoApi.Models
         Task UpdateAsync(string id, Usuario updatedUsuario);
         Task RemoveAsync(string id);
         Task<Usuario?> AuthenticateAsync(string gmail, string password);
+        Task<Usuario> GetAsyncByGmail(string gmail); // Agregar este método
     }
 }
