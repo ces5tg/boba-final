@@ -119,41 +119,86 @@ def similitud_coseno(vector1, vector2):
         return sum_xy / denominador
 
 def recomendar(user_id, cercanos, movies_filtro):
-    print(cercanos , "estos son los -usarios mas cercanos ")
-    print(movies_filtro , " filtro de peliculas")
+    #id del usuario
+    #cercanos -> similitud de coseno entre usuarios
+    #movies_filtro -> dataset de VISUALIZACIONES , superiores a 10 SEGUNDOS
+    filtro = movies_filtro
     recomendaciones = {}
     nearest = cercanos
     user_movies = [movie for movie in movies_filtro if movie['idUsuario'] == user_id]
+
     userRatings = {movie['idMovie']: movie['sumatoria'] for movie in user_movies}
-    totalDistance = 0.0
+    """ 
+    USER-RATINGS -> cramos un diccionario (user_Id :[peliculas:sumarotia]])
+    OJO -> "sumatoria" es la represnetacion de "rating" , este valor nos indica que tan importante es una pelicula para un determinado usuario
+    user_id:{
+        pelicula_id: 4,   ----------> "SUMATORIA"
+        pelicula_id: 2,
+        pelicula_id: 0
+     }
+       """
+    totalDistance = 0.0 
+    """ 
+    totalDistance -> la distancia total que hay entre  los vecinos mas cercanos
+    cercanos  = [(id_usuario : sumatoria)] ====>[('1000', 0.9), ('1001', 0.8), ('1002', 0.5) ......] 
+    en este vector la distancia de los 3 KNN seria 0.9 + 0.8 + 0.5 = 2.2
+    """
     for i in range(min(10, len(nearest))):
-        totalDistance += nearest[i][1]
+        #IMPORTANTE => min(10, len(nearest)) - es la representacion de los vecinos mas cercanos , el maximo valor que el K tomara es "10"
+        totalDistance += nearest[i][1] # nearest[orden][SUMATORIA]  ======>  ('8019', 0.8) = [0][1] ---- TOMAMOS EL VALOR DE LA SIMILITUD DEL COSENO
+        # la distancia es =>  0.9 + 0.8 + 0.5 = 2.2
     if totalDistance == 0.0:
         return []
     for i in range(min(10, len(nearest))):
-        weight = nearest[i][1] / totalDistance
-        neighbor_id = nearest[i][0]
+        weight = nearest[i][1] / totalDistance # nearest[orden][SUMATORIA]  == 0.9/2.2 
+        """ 
+         0.9/2.2 = 0.4 - weight 
+         0.8/2.2 = 0.36 - weight
+         0.5/2.2 = 0.22 - weight
+           """
+        neighbor_id = nearest[i][0] #nearest[orden][id_usuario] ======>  ('8019', 0.8) = [0][1] --- TOMAMOS EL ID USUARIO
         neighbor_movies = [movie for movie in movies_filtro if movie['idUsuario'] == neighbor_id]
-        neighborRatings = {movie['idMovie']: movie['sumatoria'] for movie in neighbor_movies}
+        """ 
+        dentro del bucle for el valor de "neighbor_id" va cambiando ,recordemos que este  "neighbor_id" lo obtenemos de haber aplicado la similitud de conseno entre usuarios
+        neighbor_movies = [        
+           json_visualizacion  , json_visualizacion  , json_visualizacion  , json_visualizacion .....
+        ]
+
+        IMPORTANTE -> dentro del array que contienen json de tipo visualizacion
+        """
+        print(neighbor_movies  , "movies n")
+        neighborRatings  = {movie['idMovie']: movie['sumatoria'] for movie in neighbor_movies}
+        """ 
+         {
+            id_pelicula_1: 4,  ----- (idMovie , sumatoria)
+            id_pelicula_2: 2,
+            id_pelicula_3: 1,
+           
+         }
+           """
+        print(neighborRatings ,  "ratings n")
         for movie_id, rating in neighborRatings.items():
-            if movie_id not in userRatings:
-                if movie_id not in recomendaciones:
+            if movie_id not in userRatings:# si la pelicula de "neighborRatings" no esta dentro de "userRatings"
+                if movie_id not in recomendaciones:# si dentro del DICCIONARIO "recomendaciones" no existe esta CLAVE
                     recomendaciones[movie_id] = rating * weight
-                else:
+                    #recomendactiones[id_pelicula_1] = SUMATORIA * WEIGHT  -----> RECUERDEN ESTO -(0.9/2.2 = 0.4) - weight 
+                else:# si dentro del diccionario YA EXISTE esta CLAVE
                     recomendaciones[movie_id] += rating * weight
-    recomendaciones = sorted(recomendaciones.items(), key=lambda item: item[1], reverse=True)
-    recommended_movie_ids = [movie[0] for movie in recomendaciones]
+                    #si ese "id_pelicula" ya existe en el diccionario , entonces se SUMARA el valor
+    recomendaciones = sorted(recomendaciones.items(), key=lambda item: item[1], reverse=True)#ORDENAMIENTO DE MAYOR A MENOR
+    recommended_movie_ids = [movie[0] for movie in recomendaciones]#aqui obtenemos la clave de los valores dentro del diccionario
+    #   (pelicula_id : weight_total) == [0][1] -> MIREN LA POSICION "0"
 
     resultados = []
-    for movie_id in recommended_movie_ids[:10]:
+    print("antes de pasar AL FOR ---------------------")
+    print(movies_filtro)
+
+    for movie_id in recommended_movie_ids[:10]:# obtenemos el TOP 10 de VIDEOS
         pelicula = next((movie for movie in movies_filtro if movie['idMovie'] == movie_id), None)
-        if pelicula:
+        #obtenemos la infomracion de la pelicula
+        if pelicula:#si existe la pelicula dentro del dataset
             elemento = {
-                'id': pelicula['id_x'],
-                'datos': {
-                    'movieId': pelicula['movieId'],
-                    'url': pelicula['url']
-                }
+                'id': pelicula['id']
             }
             resultados.append(elemento)
 
@@ -211,26 +256,28 @@ def knn_usuarios(user_id, visualizaciones):
     print(df_movies , "dataset de moviess")
 
     df_filtered_visualizaciones = df_visualizaciones[df_visualizaciones['timeVisualizacion'] > "00:00:10"]
-    df_movies_filtro = pd.merge(df_filtered_visualizaciones, df_movies, left_on='idMovie', right_on='movieId', how='inner')
+    #df_movies_filtro = pd.merge(df_filtered_visualizaciones, df_movies, left_on='idMovie', right_on='movieId', how='inner')
 
-    grouped_movies = df_movies_filtro.groupby('idUsuario')['idMovie'].apply(list).to_dict()
+    grouped_movies = df_filtered_visualizaciones.groupby('idUsuario')['idMovie'].apply(list).to_dict()
+    #agrupamiento      idUusario - [id_pelicula ,id_pelicula,id_pelicula,id_pelicula]
 
-    user_movie = grouped_movies.get(user_id, [])
-
+    user_movie = grouped_movies.get(user_id, []) #generamos un vector para el usuario a BUSCAR (el que pasamos por el ENDPOINT recomendaciones/id_usuario)
+    print(user_movie , 'vecto de usuario y peliculas -----------------')
     similarities = []
     for user, movie_ids in grouped_movies.items():
         similarity = similitud_coseno(user_movie, movie_ids)
+        #Aplicamos la similitud el coseno entre el USUARIO a BUSCAR y TODOS LOS USUARIOS DEL DATASET --- (idUusario - [id_pelicula ,id_pelicula,id_pelicula,id_pelicula])
         similarities.append((user, similarity))
 
-    sorted_similarities = sorted(similarities, key=lambda item: item[1], reverse=True)
-    print( df_movies_filtro , "filtro de plicual")
+    sorted_similarities = sorted(similarities, key=lambda item: item[1], reverse=True)#ordenamiento
+
     recomendaciones_final = [(user, similarity) for user, similarity in sorted_similarities if similarity is not None]
+    #recomendaciones_final -> [('1000', 0.9), ('1001', 0.8), ('1002', 0.5) ......]  ---- 
     print(recomendaciones_final)
     print("++++++++++++++++++++++++++++")
-    print(df_movies_filtro)
     #(1 , 0.67) , (45,0,97)
     # Llamar a la función recomendar para obtener las recomendaciones finales
-    final_recommendations = recomendar(user_id, recomendaciones_final, df_movies_filtro.to_dict(orient='records'))
+    final_recommendations = recomendar(user_id, recomendaciones_final,df_filtered_visualizaciones.to_dict(orient='records'))
 
     return final_recommendations
 
